@@ -36,8 +36,8 @@ A `TextItem` represents one message added by a device. It consists of the device
 A `TextItem` is codable so that it can be encoded into and decoded from JSON format.
 
 ## Data Manager Functions (inside DataManager.swift)
-`static func save <T:Encodable> (_ object:T, with fileName:String)` converts a codable object into JSON format and save it in a local file with the specified file name.
-`static func load <T:Decodable> (_ fileName:String, with type:T.Type) -> T` decode the specified file from JSON format and returns the object.
-`static func loadData (_ fileName:String) -> Data?` retrieves the raw data from the specified file and returns it (without decoding).
-`static func loadAll <T:Decodable> (_ type:T.Type) -> [T]` calls the `load()` function on all files within a directory.
-`static func delete (_ fileName:String)` deletes the file of the specified name
+- `static func save <T:Encodable> (_ object:T, with fileName:String)` converts a codable object into JSON format and save it in a local file with the specified file name.
+- `static func load <T:Decodable> (_ fileName:String, with type:T.Type) -> T` decode the specified file from JSON format and returns the object.
+- `static func loadData (_ fileName:String) -> Data?` retrieves the raw data from the specified file and returns it (without decoding).
+- `static func loadAll <T:Decodable> (_ type:T.Type) -> [T]` calls the `load()` function on all files within a directory.
+- `static func delete (_ fileName:String)` deletes the file of the specified name
