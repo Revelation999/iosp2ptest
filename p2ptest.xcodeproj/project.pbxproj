@@ -11,6 +11,7 @@
 		CC466F8F27CC64EA00196D46 /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC466F8E27CC64EA00196D46 /* DataManager.swift */; };
 		CC466F9127CC70D800196D46 /* MessageTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC466F9027CC70D800196D46 /* MessageTableViewCell.swift */; };
 		CC466F9327CC712D00196D46 /* MessageTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC466F9227CC712D00196D46 /* MessageTableViewController.swift */; };
+		CC4B5F87280DC4710054DB50 /* LogItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC4B5F86280DC4710054DB50 /* LogItem.swift */; };
 		CCA274EF27C99A7C0023F711 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA274EE27C99A7C0023F711 /* AppDelegate.swift */; };
 		CCA274F127C99A7C0023F711 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA274F027C99A7C0023F711 /* SceneDelegate.swift */; };
 		CCA274F627C99A7C0023F711 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CCA274F427C99A7C0023F711 /* Main.storyboard */; };
@@ -24,6 +25,7 @@
 		CC466F8E27CC64EA00196D46 /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
 		CC466F9027CC70D800196D46 /* MessageTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageTableViewCell.swift; sourceTree = "<group>"; };
 		CC466F9227CC712D00196D46 /* MessageTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageTableViewController.swift; sourceTree = "<group>"; };
+		CC4B5F86280DC4710054DB50 /* LogItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogItem.swift; sourceTree = "<group>"; };
 		CCA274EB27C99A7C0023F711 /* p2ptest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = p2ptest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CCA274EE27C99A7C0023F711 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		CCA274F027C99A7C0023F711 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -75,6 +77,7 @@
 				CCA274FC27C99A7D0023F711 /* LaunchScreen.storyboard */,
 				CCA274FF27C99A7D0023F711 /* Info.plist */,
 				CCA274F727C99A7C0023F711 /* p2ptest.xcdatamodeld */,
+				CC4B5F86280DC4710054DB50 /* LogItem.swift */,
 			);
 			path = p2ptest;
 			sourceTree = "<group>";
@@ -150,6 +153,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CC466F8F27CC64EA00196D46 /* DataManager.swift in Sources */,
+				CC4B5F87280DC4710054DB50 /* LogItem.swift in Sources */,
 				CCA274EF27C99A7C0023F711 /* AppDelegate.swift in Sources */,
 				CC466F8D27CC637A00196D46 /* TextItem.swift in Sources */,
 				CCA274F927C99A7C0023F711 /* p2ptest.xcdatamodeld in Sources */,

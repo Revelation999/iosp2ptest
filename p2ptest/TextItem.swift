@@ -10,16 +10,17 @@ import Foundation
 struct TextItem : Codable {
     
     var source:String
-    var message:String
-    var date:Date
-    var uuid:UUID
+    var message:Float32
+    var round:Int
+    //var date:Date
+    //var uuid:UUID
     
-    func saveItem() {
+    /*func saveItem() {
         DataManager.save(self, with: uuid.uuidString)
     }
     
     func deleteItem() {
         DataManager.delete(uuid.uuidString)
-    }
+    }*/
     
 }

@@ -10,14 +10,23 @@ import MultipeerConnectivity
 
 class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBrowserViewControllerDelegate {
     
-    var textItems:[TextItem]!
+    var state:Float32 = Float32(Int8.random(in: 0..<1))
+    var round:Int = 0
+    var started:Bool = false
+    var localStates:[String:[TextItem]]!
+    var currentStates:[String:Float32]!
+    var logItems:[LogItem]!
     
     var peerID:MCPeerID!
     var mcSession:MCSession!
     var mcAdvertiserAssistant:MCAdvertiserAssistant!
     
-    @IBAction func sendMessage(_ sender: Any) {
-        let addAlert = UIAlertController(title: "New Message", message: "Enter the message", preferredStyle: .alert)
+    @IBAction func initiateProtocol(_ sender: Any) {
+        if (self.mcSession.connectedPeers.count > 0) {
+            started = true
+            ACAlg(TextItem(source: UIDevice.current.identifierForVendor!.uuidString, message: self.state, round: self.round))
+        }
+        /*let addAlert = UIAlertController(title: "New Message", message: "Enter the message", preferredStyle: .alert)
         addAlert.addTextField { (textfield:UITextField) in
             textfield.placeholder = "Text"
         }
@@ -25,8 +34,8 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
         addAlert.addAction(UIAlertAction(title: "Create", style: .default, handler: { (action:UIAlertAction) in
             
             guard let text = addAlert.textFields?.first?.text else { return }
-            let newMessage = TextItem(source: UIDevice.current.name, message: text, date: Date(), uuid: UUID())
-            newMessage.saveItem()
+            let newMessage = TextItem(source: UIDevice.current.name, message: self.state, round: self.round)
+            //newMessage.saveItem()
             
             self.textItems.append(newMessage)
             
@@ -40,7 +49,7 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
         
         addAlert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
         
-        self.present(addAlert, animated: true, completion: nil)
+        self.present(addAlert, animated: true, completion: nil)*/
     }
     
     @IBAction func showConnectivityAction(_ sender: Any) {
@@ -65,7 +74,7 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
         
     }
     
-    func shareTextMessage(_ textItem:TextItem) {
+    /*func shareTextMessage(_ textItem:TextItem) {
         if mcSession.connectedPeers.count > 0 {
             if let textData = DataManager.loadData(textItem.uuid.uuidString) {
                 do {
@@ -75,7 +84,7 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
                 }
             }
         }
-    }
+    }*/
     
     func setUpConnectivity() {
         peerID = MCPeerID(displayName: UIDevice.current.name)
@@ -90,11 +99,50 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
     }
     
     func loadData() {
-        textItems = [TextItem]()
-        textItems = DataManager.loadAll(TextItem.self).sorted(by: {
+        logItems = [LogItem]()
+        logItems = DataManager.loadAll(LogItem.self).sorted(by: {
             $0.date < $1.date
         })
         tableView.reloadData()
+    }
+    
+    func ACAlg(_ initialState: TextItem) {
+        broadcast(initialState)
+        var count:Int = 0
+        while (true) {
+            if (currentStates.values.count > self.mcSession.connectedPeers.count / 2) {
+                count = 0
+                self.state = currentStates.values.reduce(0, +) / Float32(currentStates.values.count)
+                let roundLog = LogItem(round: self.round, currentState: self.currentStates, date: Date(), uuid: UUID())
+                DataManager.save(roundLog, with: roundLog.uuid.uuidString)
+                self.loadData()
+                currentStates.removeAll()
+                self.round += 1
+                let newText = TextItem(source: UIDevice.current.identifierForVendor!.uuidString, message: self.state, round: self.round)
+                broadcast(newText)
+                
+                if (self.round == 100) {
+                    print("Broadcast complete for this node.")
+                    localStates.removeAll()
+                    started = false
+                    break
+                }
+            } else {
+                count += 1
+            }
+            if (count >= 1_000_000_000) {
+                fatalError("Cannot complete process")
+            }
+        }
+    }
+    
+    func broadcast(_ message : TextItem) {
+        let encoder = JSONEncoder()
+        do {
+            try mcSession.send(encoder.encode(message), toPeers: mcSession.connectedPeers, with: .reliable)
+        } catch {
+            fatalError("Cannot send message")
+        }
     }
 
     // MARK: - Table view data source
@@ -104,7 +152,7 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return textItems.count
+        return logItems.count
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -113,10 +161,11 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
         // Configure the cell...
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "MM/dd/yyyy HH:mm:ss"
-        let textItem = textItems[indexPath.row]
-        cell.sourceLabel.text = textItem.source
-        cell.messageLabel.text = textItem.message
-        cell.timeLabel.text = dateFormatter.string(from: textItem.date)
+        let logItem = logItems[indexPath.row]
+        cell.sourceLabel.text = String(logItem.round)
+        let jsonData = try? JSONSerialization.data(withJSONObject: logItem.currentState, options: [])
+        cell.messageLabel.text = String(data: jsonData!, encoding: .utf8)
+        cell.timeLabel.text = dateFormatter.string(from: logItem.date)
         return cell
     }
     
@@ -136,12 +185,20 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
     }
     
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
+        if (!started) {
+            started = true
+            ACAlg(TextItem(source: UIDevice.current.identifierForVendor!.uuidString, message: self.state, round: self.round))
+        }
         do {
             let textItem = try JSONDecoder().decode(TextItem.self, from: data)
-            DataManager.save(textItem, with: textItem.uuid.uuidString)
-            DispatchQueue.main.async {
-                self.loadData()
+            localStates[textItem.source, default: []].append(textItem)
+            if (textItem.round == self.round) {
+                currentStates[textItem.source] = textItem.message
             }
+            //DataManager.save(textItem, with: textItem.uuid.uuidString)
+            /*DispatchQueue.main.async {
+                self.loadData()
+            }*/
         } catch {
             fatalError("Unable ot process the received data.")
         }
