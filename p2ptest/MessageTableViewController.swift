@@ -118,6 +118,13 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
                 self.loadData()
                 currentStates.removeAll()
                 self.round += 1
+                for (source, messages) in localStates {
+                    for message in messages {
+                        if (message.round == self.round) {
+                            currentStates[source] = message.message
+                        }
+                    }
+                }
                 let newText = TextItem(source: UIDevice.current.identifierForVendor!.uuidString, message: self.state, round: self.round)
                 broadcast(newText)
                 
