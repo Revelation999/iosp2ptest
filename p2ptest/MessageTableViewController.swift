@@ -10,12 +10,23 @@ import MultipeerConnectivity
 
 class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBrowserViewControllerDelegate {
     
+    //Variables for both AC and Small AC
     var state:Float32 = Float32(Int8.random(in: 0..<1))
     var round:Int = 0
     var started:Bool = false
+    var smallAC:Bool = true
+    
+    //Variables for AC
     var localStates:[String:[TextItem]]!
     var currentStates:[String:Float32]!
     var logItems:[LogItem]!
+    
+    //Variables for SMall AC
+    var deviceOrder:Int!
+    var minState:Float32!
+    var maxState:Float32!
+    var peerIDs:Array<String>!
+    var hasReceivedFromNode:Array<Bool>!
     
     var peerID:MCPeerID!
     var mcSession:MCSession!
@@ -24,7 +35,12 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
     @IBAction func initiateProtocol(_ sender: Any) {
         if (self.mcSession.connectedPeers.count > 0) {
             started = true
-            ACAlg(TextItem(source: UIDevice.current.identifierForVendor!.uuidString, message: self.state, round: self.round))
+            if (!self.smallAC) {
+                ACAlg(TextItem(source: self.peerID.displayName, message: self.state, round: self.round))
+            } else {
+                smallACAlg(TextItem(source: self.peerID.displayName, message: self.state, round: self.round))
+                
+            }
         }
         /*let addAlert = UIAlertController(title: "New Message", message: "Enter the message", preferredStyle: .alert)
         addAlert.addTextField { (textfield:UITextField) in
@@ -87,7 +103,7 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
     }*/
     
     func setUpConnectivity() {
-        peerID = MCPeerID(displayName: UIDevice.current.name)
+        peerID = MCPeerID(displayName: UIDevice.current.identifierForVendor!.uuidString)
         mcSession = MCSession(peer: peerID, securityIdentity: nil, encryptionPreference: .required)
         mcSession.delegate = self
     }
@@ -143,6 +159,39 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
         }
     }
     
+    func smallACAlg (_ initialState: TextItem) {
+        broadcast(initialState)
+        self.peerIDs = self.mcSession.connectedPeers.map{$0.displayName}
+        self.peerIDs.append(self.peerID.displayName)
+        self.peerIDs.sort{$0 < $1}
+        self.deviceOrder = self.peerIDs.firstIndex(of: self.peerID.displayName)
+        self.minState = initialState.message
+        self.maxState = initialState.message
+        self.hasReceivedFromNode = Array(repeating: false, count: self.mcSession.connectedPeers.count)
+        while (true) {
+            if (self.round >= 100) {
+                break
+            }
+        }
+        print(String(format: "Final state", self.state))
+    }
+    
+    func reset() {
+        self.hasReceivedFromNode = self.hasReceivedFromNode.map{$0 && false}
+        self.hasReceivedFromNode[self.deviceOrder] = true
+        self.minState = self.state
+        self.maxState = self.state
+    }
+    
+    func store(_ message : Float32){
+        if (self.minState > message) {
+            self.minState = message
+        }
+        if (self.maxState < message) {
+            self.maxState = message
+        }
+    }
+    
     func broadcast(_ message : TextItem) {
         let encoder = JSONEncoder()
         do {
@@ -192,22 +241,49 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
     }
     
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
-        if (!started) {
-            started = true
-            ACAlg(TextItem(source: UIDevice.current.identifierForVendor!.uuidString, message: self.state, round: self.round))
-        }
-        do {
-            let textItem = try JSONDecoder().decode(TextItem.self, from: data)
-            localStates[textItem.source, default: []].append(textItem)
-            if (textItem.round == self.round) {
-                currentStates[textItem.source] = textItem.message
+        if (!self.started) {
+            self.started = true
+            if (!self.smallAC) {
+                DispatchQueue.main.async {
+                    self.ACAlg(TextItem(source: self.peerID.displayName, message: self.state, round: self.round))
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.smallACAlg(TextItem(source: self.peerID.displayName, message: self.state, round: self.round))
+                }
+                
             }
-            //DataManager.save(textItem, with: textItem.uuid.uuidString)
-            /*DispatchQueue.main.async {
-                self.loadData()
-            }*/
-        } catch {
-            fatalError("Unable ot process the received data.")
+        }
+        if (!self.smallAC) {
+            do {
+                let textItem = try JSONDecoder().decode(TextItem.self, from: data)
+                localStates[textItem.source, default: []].append(textItem)
+                if (textItem.round == self.round) {
+                currentStates[textItem.source] = textItem.message
+                }
+            } catch {
+                fatalError("Unable ot process the received data.")
+            }
+        } else {
+            do {
+                let textItem = try JSONDecoder().decode(TextItem.self, from: data)
+                if (textItem.round > self.round) {
+                    self.round = textItem.round
+                    self.state = textItem.message
+                    self.reset()
+                } else if (textItem.round == self.round && !self.hasReceivedFromNode[self.peerIDs.firstIndex(of: textItem.source) ?? -1]) {
+                    self.hasReceivedFromNode[self.peerIDs.firstIndex(of: textItem.source) ?? -1] = true
+                    self.store(textItem.message)
+                    if (self.hasReceivedFromNode.filter{$0}.count > self.mcSession.connectedPeers.count / 2) {
+                        self.state = (self.minState + self.maxState) / 2
+                        self.round += 1
+                        self.reset()
+                    }
+                }
+                
+            } catch {
+                fatalError("Unable to process the received data")
+            }
         }
 
     }
