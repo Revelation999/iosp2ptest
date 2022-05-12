@@ -38,7 +38,7 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
             if (!self.smallAC) {
                 ACAlg(TextItem(source: self.peerID.displayName, message: self.state, round: self.round))
             } else {
-                smallACAlg(TextItem(source: self.peerID.displayName, message: self.state, round: self.round))
+                smallACAlg()
                 
             }
         }
@@ -147,7 +147,7 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
                 if (self.round == 100) {
                     print("Broadcast complete for this node.")
                     localStates.removeAll()
-                    started = false
+                    self.started = false
                     break
                 }
             } else {
@@ -159,17 +159,20 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
         }
     }
     
-    func smallACAlg (_ initialState: TextItem) {
-        broadcast(initialState)
+    func smallACAlg () {
+        DispatchQueue.global().async {
+            self.unreliableBroadcast()
+        }
         self.peerIDs = self.mcSession.connectedPeers.map{$0.displayName}
         self.peerIDs.append(self.peerID.displayName)
         self.peerIDs.sort{$0 < $1}
         self.deviceOrder = self.peerIDs.firstIndex(of: self.peerID.displayName)
-        self.minState = initialState.message
-        self.maxState = initialState.message
+        self.minState = self.state
+        self.maxState = self.state
         self.hasReceivedFromNode = Array(repeating: false, count: self.mcSession.connectedPeers.count)
         while (true) {
             if (self.round >= 100) {
+                self.started = false
                 break
             }
         }
@@ -189,6 +192,20 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
         }
         if (self.maxState < message) {
             self.maxState = message
+        }
+    }
+    
+    func unreliableBroadcast() {
+        let encoder = JSONEncoder()
+        while (true) {
+            do {
+                try mcSession.send(encoder.encode(TextItem(source: self.peerID.displayName, message: self.state, round: self.round)), toPeers: mcSession.connectedPeers, with: .unreliable)
+            } catch {
+                fatalError("Cannot send message")
+            }
+            if (!started) {
+                break
+            }
         }
     }
     
@@ -249,7 +266,7 @@ class MessageTableViewController: UITableViewController, MCSessionDelegate, MCBr
                 }
             } else {
                 DispatchQueue.main.async {
-                    self.smallACAlg(TextItem(source: self.peerID.displayName, message: self.state, round: self.round))
+                    self.smallACAlg()
                 }
                 
             }
